@@ -1,0 +1,287 @@
+import { useEffect, useState } from 'react';
+import { Table, Button, Modal, Form, Input, Select, message, Space, Tag } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { modelAPI, categoryAPI, tagAPI } from '../services/api';
+
+const { TextArea } = Input;
+
+export default function ModelsPageAntd() {
+  const [models, setModels] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingModel, setEditingModel] = useState(null);
+  const [form] = Form.useForm();
+
+  useEffect(() => {
+    loadModels();
+    loadCategories();
+    loadTags();
+  }, []);
+
+  const loadModels = async () => {
+    setLoading(true);
+    try {
+      const response = await modelAPI.getAll({});
+      setModels(response.data.data);
+    } catch (error) {
+      message.error('加载模型列表失败');
+      console.error('Failed to load models:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const response = await categoryAPI.getAll('model');
+      setCategories(response.data.data);
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+    }
+  };
+
+  const loadTags = async () => {
+    try {
+      const response = await tagAPI.getAll();
+      setTags(response.data.data);
+    } catch (error) {
+      console.error('Failed to load tags:', error);
+    }
+  };
+
+  const handleCreate = () => {
+    setEditingModel(null);
+    form.resetFields();
+    setModalOpen(true);
+  };
+
+  const handleEdit = (model) => {
+    setEditingModel(model);
+    form.setFieldsValue({
+      name: model.name,
+      author: model.author,
+      version: model.version || '',
+      base_model: model.base_model || '',
+      category_id: model.category_id || undefined,
+      description: model.description || '',
+      readme: model.readme || '',
+      prompt_example: model.prompt_example || '',
+      comparison: model.comparison || '',
+    });
+    setModalOpen(true);
+  };
+
+  const handleDelete = (id) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这个模型吗？',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await modelAPI.delete(id);
+          message.success('删除成功');
+          loadModels();
+        } catch (error) {
+          console.error('Failed to delete model:', error);
+          message.error('删除失败');
+        }
+      },
+    });
+  };
+
+  const handleSubmit = async (values) => {
+    try {
+      if (editingModel) {
+        await modelAPI.update(editingModel.id, values);
+        message.success('更新成功');
+      } else {
+        await modelAPI.create(values);
+        message.success('创建成功');
+      }
+      setModalOpen(false);
+      loadModels();
+    } catch (error) {
+      console.error('Failed to save model:', error);
+      message.error('保存失败');
+    }
+  };
+
+  const columns = [
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 80,
+    },
+    {
+      title: '模型名称',
+      dataIndex: 'name',
+      key: 'name',
+      ellipsis: true,
+    },
+    {
+      title: '作者',
+      dataIndex: 'author',
+      key: 'author',
+      width: 150,
+    },
+    {
+      title: '基座模型',
+      dataIndex: 'base_model',
+      key: 'base_model',
+      width: 120,
+      render: (text) => text && <Tag color="blue">{text}</Tag>,
+    },
+    {
+      title: '分类',
+      dataIndex: 'category_name',
+      key: 'category_name',
+      width: 120,
+    },
+    {
+      title: '点赞',
+      dataIndex: 'likes',
+      key: 'likes',
+      width: 80,
+      sorter: (a, b) => a.likes - b.likes,
+    },
+    {
+      title: '下载',
+      dataIndex: 'downloads',
+      key: 'downloads',
+      width: 80,
+      sorter: (a, b) => a.downloads - b.downloads,
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 120,
+      fixed: 'right',
+      render: (_, record) => (
+        <Space>
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+          >
+            编辑
+          </Button>
+          <Button
+            type="link"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDelete(record.id)}
+          >
+            删除
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <div className="p-6">
+      <div className="mb-6 flex justify-between items-center">
+        <h1 className="text-2xl font-bold">模型管理</h1>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleCreate}
+        >
+          添加模型
+        </Button>
+      </div>
+
+      <Table
+        columns={columns}
+        dataSource={models}
+        loading={loading}
+        rowKey="id"
+        scroll={{ x: 1200 }}
+        pagination={{
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total) => `共 ${total} 条`,
+        }}
+      />
+
+      <Modal
+        title={editingModel ? '编辑模型' : '添加模型'}
+        open={modalOpen}
+        onCancel={() => setModalOpen(false)}
+        footer={null}
+        width={800}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+        >
+          <Form.Item
+            label="模型名称"
+            name="name"
+            rules={[{ required: true, message: '请输入模型名称' }]}
+          >
+            <Input placeholder="请输入模型名称" />
+          </Form.Item>
+
+          <Form.Item
+            label="作者"
+            name="author"
+            rules={[{ required: true, message: '请输入作者' }]}
+          >
+            <Input placeholder="请输入作者" />
+          </Form.Item>
+
+          <Form.Item label="版本号" name="version">
+            <Input placeholder="如：v1.0.0" />
+          </Form.Item>
+
+          <Form.Item label="基座模型" name="base_model">
+            <Input placeholder="如：R1-32B" />
+          </Form.Item>
+
+          <Form.Item label="分类" name="category_id">
+            <Select placeholder="选择分类" allowClear>
+              {categories.map((cat) => (
+                <Select.Option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="简短描述" name="description">
+            <TextArea rows={2} placeholder="请输入简短描述" />
+          </Form.Item>
+
+          <Form.Item label="详细介绍 (Markdown)" name="readme">
+            <TextArea rows={5} placeholder="支持 Markdown 格式" />
+          </Form.Item>
+
+          <Form.Item label="推荐 Prompt" name="prompt_example">
+            <TextArea rows={3} placeholder="请输入推荐 Prompt" />
+          </Form.Item>
+
+          <Form.Item label="效果对标说明" name="comparison">
+            <TextArea rows={2} placeholder="请输入效果对标说明" />
+          </Form.Item>
+
+          <Form.Item className="mb-0 text-right">
+            <Space>
+              <Button onClick={() => setModalOpen(false)}>
+                取消
+              </Button>
+              <Button type="primary" htmlType="submit">
+                {editingModel ? '更新' : '创建'}
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  );
+}

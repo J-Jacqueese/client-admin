@@ -1,0 +1,385 @@
+import { useEffect, useState } from 'react';
+import { Table, Button, Modal, Form, Input, Select, message, Space, Popconfirm, Row, Col, Drawer, Descriptions, Tag } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, EyeOutlined } from '@ant-design/icons';
+import { appAPI, categoryAPI } from '../services/api';
+
+const { TextArea } = Input;
+
+export default function AppsPage() {
+  const [apps, setApps] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingApp, setEditingApp] = useState(null);
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+  const [viewingApp, setViewingApp] = useState(null);
+  const [form] = Form.useForm();
+
+  useEffect(() => {
+    loadApps();
+    loadCategories();
+  }, []);
+
+  const loadApps = async () => {
+    setLoading(true);
+    try {
+      const response = await appAPI.getAll({});
+      setApps(response.data.data);
+    } catch (error) {
+      message.error('加载应用列表失败');
+      console.error('Failed to load apps:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const response = await categoryAPI.getAll('app');
+      setCategories(response.data.data);
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+    }
+  };
+
+  const handleCreate = () => {
+    setEditingApp(null);
+    form.resetFields();
+    setModalOpen(true);
+  };
+
+  const handleView = (app) => {
+    setViewingApp(app);
+    setDetailDrawerOpen(true);
+  };
+
+  const handleEdit = (app) => {
+    setEditingApp(app);
+    form.setFieldsValue({
+      name: app.name,
+      developer: app.developer,
+      version: app.version || '',
+      base_model: app.base_model || '',
+      category_id: app.category_id || undefined,
+      description: app.description || '',
+      detail: app.detail || '',
+      website_url: app.website_url || '',
+      comparison: app.comparison || '',
+      icon_bg: app.icon_bg || '',
+    });
+    setModalOpen(true);
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await appAPI.delete(id);
+      message.success('删除成功');
+      loadApps();
+    } catch (error) {
+      console.error('Failed to delete app:', error);
+      message.error('删除失败');
+    }
+  };
+
+  const handleSubmit = async (values) => {
+    try {
+      if (editingApp) {
+        await appAPI.update(editingApp.id, values);
+        message.success('更新成功');
+      } else {
+        await appAPI.create(values);
+        message.success('创建成功');
+      }
+      setModalOpen(false);
+      loadApps();
+    } catch (error) {
+      console.error('Failed to save app:', error);
+      message.error('保存失败');
+    }
+  };
+
+  const columns = [
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 80,
+    },
+    {
+      title: '应用名称',
+      dataIndex: 'name',
+      key: 'name',
+      ellipsis: true,
+      width: 200,
+    },
+    {
+      title: '开发者',
+      dataIndex: 'developer',
+      key: 'developer',
+      width: 150,
+    },
+    {
+      title: '分类',
+      dataIndex: 'category_name',
+      key: 'category_name',
+      width: 120,
+    },
+    {
+      title: '点赞数',
+      dataIndex: 'upvotes',
+      key: 'upvotes',
+      width: 100,
+      sorter: (a, b) => (a.upvotes || 0) - (b.upvotes || 0),
+    },
+    {
+      title: '浏览量',
+      dataIndex: 'views',
+      key: 'views',
+      width: 100,
+      sorter: (a, b) => (a.views || 0) - (b.views || 0),
+    },
+    {
+      title: '官网',
+      dataIndex: 'website_url',
+      key: 'website_url',
+      width: 100,
+      render: (url) =>
+        url && (
+          <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600">
+            <LinkOutlined /> 访问
+          </a>
+        ),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 200,
+      fixed: 'right',
+      render: (_, record) => (
+        <Space size="small">
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handleView(record)}
+          >
+            查看
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+          >
+            编辑
+          </Button>
+          <Popconfirm
+            title="确定要删除这个应用吗？"
+            onConfirm={() => handleDelete(record.id)}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <div className="p-6">
+      <div className="mb-6 flex justify-between items-center">
+        <h1 className="text-2xl font-bold">应用管理</h1>
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+          添加应用
+        </Button>
+      </div>
+
+      <Table
+        columns={columns}
+        dataSource={apps}
+        loading={loading}
+        rowKey="id"
+        scroll={{ x: 1200 }}
+        pagination={{
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total) => `共 ${total} 条`,
+          defaultPageSize: 10,
+          pageSizeOptions: ['10', '20', '50', '100'],
+        }}
+      />
+
+      <Modal
+        title={editingApp ? '编辑应用' : '添加应用'}
+        open={modalOpen}
+        onCancel={() => setModalOpen(false)}
+        footer={null}
+        width={900}
+        destroyOnHidden
+      >
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          <Form.Item
+            label="应用名称"
+            name="name"
+            rules={[{ required: true, message: '请输入应用名称' }]}
+          >
+            <Input placeholder="请输入应用名称" />
+          </Form.Item>
+
+          <Form.Item
+            label="开发者"
+            name="developer"
+            rules={[{ required: true, message: '请输入开发者' }]}
+          >
+            <Input placeholder="请输入开发者" />
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="版本号" name="version">
+                <Input placeholder="如：v1.0.0" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="基于模型" name="base_model">
+                <Input placeholder="如：DeepSeek-R1" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item label="分类" name="category_id">
+            <Select placeholder="选择分类" allowClear>
+              {categories.map((cat) => (
+                <Select.Option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="简短描述" name="description">
+            <TextArea rows={2} placeholder="请输入简短描述" />
+          </Form.Item>
+
+          <Form.Item label="详细介绍" name="detail">
+            <TextArea rows={5} placeholder="支持 Markdown 格式" />
+          </Form.Item>
+
+          <Form.Item label="官网链接" name="website_url">
+            <Input placeholder="https://example.com" />
+          </Form.Item>
+
+          <Form.Item label="效果对比说明" name="comparison">
+            <TextArea rows={2} placeholder="请输入效果对比说明" />
+          </Form.Item>
+
+          <Form.Item label="应用图标地址（图片 URL）" name="icon_bg">
+            <Input placeholder="例如：https://example.com/logo.png" />
+          </Form.Item>
+
+          <Form.Item className="mb-0 text-right">
+            <Space>
+              <Button onClick={() => setModalOpen(false)}>取消</Button>
+              <Button type="primary" htmlType="submit">
+                {editingApp ? '更新' : '创建'}
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 详情抽屉 */}
+      <Drawer
+        title="应用详情"
+        placement="right"
+        width={720}
+        onClose={() => setDetailDrawerOpen(false)}
+        open={detailDrawerOpen}
+      >
+        {viewingApp && (
+          <div className="space-y-6">
+            <Descriptions title="基本信息" bordered column={2}>
+              <Descriptions.Item label="ID">{viewingApp.id}</Descriptions.Item>
+              <Descriptions.Item label="应用名称">{viewingApp.name}</Descriptions.Item>
+              <Descriptions.Item label="开发者">{viewingApp.developer}</Descriptions.Item>
+              <Descriptions.Item label="版本号">{viewingApp.version || '-'}</Descriptions.Item>
+              <Descriptions.Item label="基于模型" span={2}>
+                {viewingApp.base_model || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="分类" span={2}>
+                {viewingApp.category_name || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="应用图标" span={2}>
+                {viewingApp.icon_bg ? (
+                  <div className="flex items-center space-x-3">
+                    <img
+                      src={viewingApp.icon_bg}
+                      alt={viewingApp.name}
+                      style={{ width: 48, height: 48, borderRadius: 12, objectFit: 'cover' }}
+                    />
+                    <span className="text-xs text-gray-500 break-all">{viewingApp.icon_bg}</span>
+                  </div>
+                ) : (
+                  '-'
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="简短描述" span={2}>
+                {viewingApp.description || '-'}
+              </Descriptions.Item>
+            </Descriptions>
+
+            <Descriptions title="统计数据" bordered column={2}>
+              <Descriptions.Item label="点赞数">{viewingApp.upvotes || 0}</Descriptions.Item>
+              <Descriptions.Item label="浏览量">{viewingApp.views || 0}</Descriptions.Item>
+            </Descriptions>
+
+            {viewingApp.detail && (
+              <div>
+                <h4 className="text-base font-semibold mb-3">详细介绍</h4>
+                <div className="bg-gray-50 p-4 rounded border">
+                  <pre className="whitespace-pre-wrap text-sm">{viewingApp.detail}</pre>
+                </div>
+              </div>
+            )}
+
+            {viewingApp.comparison && (
+              <div>
+                <h4 className="text-base font-semibold mb-3">效果对比说明</h4>
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded text-sm">
+                  {viewingApp.comparison}
+                </div>
+              </div>
+            )}
+
+            {viewingApp.website_url && (
+              <Descriptions title="链接信息" bordered>
+                <Descriptions.Item label="官网链接">
+                  <Button
+                    type="link"
+                    href={viewingApp.website_url}
+                    target="_blank"
+                    icon={<LinkOutlined />}
+                  >
+                    {viewingApp.website_url}
+                  </Button>
+                </Descriptions.Item>
+              </Descriptions>
+            )}
+
+            <Descriptions title="时间信息" bordered column={2}>
+              <Descriptions.Item label="创建时间">
+                {viewingApp.created_at ? new Date(viewingApp.created_at).toLocaleString('zh-CN') : '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="更新时间">
+                {viewingApp.updated_at ? new Date(viewingApp.updated_at).toLocaleString('zh-CN') : '-'}
+              </Descriptions.Item>
+            </Descriptions>
+          </div>
+        )}
+      </Drawer>
+    </div>
+  );
+}
