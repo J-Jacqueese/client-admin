@@ -4,6 +4,19 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, FileOutlined,
 import { modelAPI, categoryAPI, tagAPI, baseModelAPI } from '../services/api';
 
 const { TextArea } = Input;
+const MODEL_TYPE_OPTIONS = [
+  { value: 'hot', label: '热门' },
+  { value: 'latest', label: '最新' },
+  { value: 'recommended', label: '推荐' },
+  { value: 'official', label: '官方' },
+];
+
+const MODEL_TYPE_META = {
+  hot: { label: '热门', color: 'red' },
+  latest: { label: '最新', color: 'green' },
+  recommended: { label: '推荐', color: 'blue' },
+  official: { label: '官方', color: 'gold' },
+};
 
 export default function ModelsPage() {
   const [models, setModels] = useState([]);
@@ -101,6 +114,7 @@ export default function ModelsPage() {
       name: model.name,
       author: model.author,
       version: model.version || '',
+      model_type: model.model_type || undefined,
       base_model: model.base_model || '',
       category_id: model.category_id || undefined,
       tags: tagIds,
@@ -181,6 +195,16 @@ export default function ModelsPage() {
       dataIndex: 'category_name',
       key: 'category_name',
       width: 120,
+    },
+    {
+      title: '模型类型',
+      dataIndex: 'model_type',
+      key: 'model_type',
+      width: 100,
+      render: (type) => {
+        if (!type || !MODEL_TYPE_META[type]) return <span className="text-gray-400">-</span>;
+        return <Tag color={MODEL_TYPE_META[type].color}>{MODEL_TYPE_META[type].label}</Tag>;
+      },
     },
     {
       title: '标签',
@@ -317,6 +341,10 @@ export default function ModelsPage() {
 
           <Form.Item label="版本号" name="version">
             <Input placeholder="如：v1.0.0" />
+          </Form.Item>
+
+          <Form.Item label="模型类型" name="model_type">
+            <Select placeholder="选择模型类型标签（可选）" allowClear options={MODEL_TYPE_OPTIONS} />
           </Form.Item>
 
           <Form.Item label="基座模型" name="base_model">
@@ -502,6 +530,13 @@ export default function ModelsPage() {
               <Descriptions.Item label="模型名称">{viewingModel.name}</Descriptions.Item>
               <Descriptions.Item label="作者">{viewingModel.author}</Descriptions.Item>
               <Descriptions.Item label="版本号">{viewingModel.version || '-'}</Descriptions.Item>
+              <Descriptions.Item label="模型类型">
+                {viewingModel.model_type && MODEL_TYPE_META[viewingModel.model_type] ? (
+                  <Tag color={MODEL_TYPE_META[viewingModel.model_type].color}>
+                    {MODEL_TYPE_META[viewingModel.model_type].label}
+                  </Tag>
+                ) : '-'}
+              </Descriptions.Item>
               <Descriptions.Item label="基座模型" span={2}>
                 {viewingModel.base_model ? (
                   <Tag color="blue">{viewingModel.base_model}</Tag>

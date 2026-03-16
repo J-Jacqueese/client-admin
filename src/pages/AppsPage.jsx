@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, message, Space, Popconfirm, Row, Col, Drawer, Descriptions, Tag } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, EyeOutlined } from '@ant-design/icons';
+import { Table, Button, Modal, Form, Input, Select, InputNumber, message, Space, Popconfirm, Row, Col, Drawer, Descriptions, Tag, Divider } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, EyeOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import { appAPI, categoryAPI } from '../services/api';
 
 const { TextArea } = Input;
@@ -14,6 +14,19 @@ export default function AppsPage() {
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
   const [viewingApp, setViewingApp] = useState(null);
   const [form] = Form.useForm();
+
+  const normalizeDownloadLinks = (downloadLinks) => {
+    if (Array.isArray(downloadLinks)) return downloadLinks;
+    if (typeof downloadLinks === 'string') {
+      try {
+        const parsed = JSON.parse(downloadLinks);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  };
 
   useEffect(() => {
     loadApps();
@@ -55,11 +68,16 @@ export default function AppsPage() {
 
   const handleEdit = (app) => {
     setEditingApp(app);
+
+    const downloadLinks = normalizeDownloadLinks(app.download_links);
+
     form.setFieldsValue({
       name: app.name,
       developer: app.developer,
       version: app.version || '',
       base_model: app.base_model || '',
+      upvotes: app.upvotes ?? 0,
+      download_links: downloadLinks,
       category_id: app.category_id || undefined,
       description: app.description || '',
       detail: app.detail || '',
@@ -83,11 +101,16 @@ export default function AppsPage() {
 
   const handleSubmit = async (values) => {
     try {
+      const submitData = {
+        ...values,
+        download_links: values.download_links || [],
+      };
+
       if (editingApp) {
-        await appAPI.update(editingApp.id, values);
+        await appAPI.update(editingApp.id, submitData);
         message.success('更新成功');
       } else {
-        await appAPI.create(values);
+        await appAPI.create(submitData);
         message.success('创建成功');
       }
       setModalOpen(false);
@@ -250,6 +273,18 @@ export default function AppsPage() {
             </Col>
           </Row>
 
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="基础点赞数"
+                name="upvotes"
+                tooltip="用于前端展示的预设点赞基数，仅后台可修改"
+              >
+                <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="如：1200" />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item label="分类" name="category_id">
             <Select placeholder="选择分类" allowClear>
               {categories.map((cat) => (
@@ -271,6 +306,55 @@ export default function AppsPage() {
           <Form.Item label="官网链接" name="website_url">
             <Input placeholder="https://example.com" />
           </Form.Item>
+
+          <Divider orientation="left">
+            <LinkOutlined /> 下载地址配置
+          </Divider>
+
+          <Form.List name="download_links">
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map(({ key, name, ...restField }) => (
+                  <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'type']}
+                      rules={[{ required: true, message: '请选择下载类型' }]}
+                    >
+                      <Select placeholder="选择下载类型" style={{ width: 180 }}>
+                        <Select.Option value="官网下载">官网下载</Select.Option>
+                        <Select.Option value="App Store">App Store</Select.Option>
+                        <Select.Option value="Google Play">Google Play</Select.Option>
+                        <Select.Option value="Windows">Windows</Select.Option>
+                        <Select.Option value="macOS">macOS</Select.Option>
+                        <Select.Option value="Android APK">Android APK</Select.Option>
+                        <Select.Option value="TestFlight">TestFlight</Select.Option>
+                        <Select.Option value="GitHub Release">GitHub Release</Select.Option>
+                        <Select.Option value="网盘下载">网盘下载</Select.Option>
+                        <Select.Option value="其他">其他</Select.Option>
+                      </Select>
+                    </Form.Item>
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'url']}
+                      rules={[
+                        { required: true, message: '请输入下载地址' },
+                        { type: 'url', message: '请输入有效 URL' },
+                      ]}
+                    >
+                      <Input placeholder="https://example.com/download" style={{ width: 420 }} />
+                    </Form.Item>
+                    <MinusCircleOutlined onClick={() => remove(name)} />
+                  </Space>
+                ))}
+                <Form.Item>
+                  <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                    添加下载地址
+                  </Button>
+                </Form.Item>
+              </>
+            )}
+          </Form.List>
 
           <Form.Item label="效果对比说明" name="comparison">
             <TextArea rows={2} placeholder="请输入效果对比说明" />
@@ -367,6 +451,28 @@ export default function AppsPage() {
                   </Button>
                 </Descriptions.Item>
               </Descriptions>
+            )}
+
+            {normalizeDownloadLinks(viewingApp.download_links).length > 0 && (
+              <div>
+                <h4 className="text-base font-semibold mb-3">
+                  <LinkOutlined className="mr-2" />
+                  下载地址
+                </h4>
+                <div className="space-y-2">
+                  {normalizeDownloadLinks(viewingApp.download_links).map((link, index) => (
+                    <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded border">
+                      <div>
+                        <Tag color="blue">{link.type || '下载地址'}</Tag>
+                        <span className="text-sm text-gray-600 ml-2">{link.url}</span>
+                      </div>
+                      <Button type="link" size="small" href={link.url} target="_blank" icon={<LinkOutlined />}>
+                        访问
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
             <Descriptions title="时间信息" bordered column={2}>
