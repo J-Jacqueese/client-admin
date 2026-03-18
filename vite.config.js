@@ -27,7 +27,7 @@ export default defineConfig({
       // 开发环境代理到后端的 /model_api 前缀
       '/model_api': {
         // 如果配置了 VITE_API_PROXY_TARGET 就走环境变量，否则默认直连线上接口
-        target: process.env.VITE_API_PROXY_TARGET || 'https://dpsk.ai/model_api/',
+        target: process.env.VITE_API_PROXY_TARGET || 'https://deepseek.club/model_api/',
         changeOrigin: true
       }
     }
