@@ -29,7 +29,7 @@ export const appAPI = {
 
 // 分类相关API
 export const categoryAPI = {
-  getAll: (type) => api.get('/categories', { params: { type } }),
+  getAll: (params) => api.get('/categories', { params }),
   create: (data) => api.post('/categories', data),
   update: (id, data) => api.put(`/categories/${id}`, data),
   delete: (id) => api.delete(`/categories/${id}`),
@@ -37,7 +37,7 @@ export const categoryAPI = {
 
 // 标签相关API
 export const tagAPI = {
-  getAll: () => api.get('/tags'),
+  getAll: (params) => api.get('/tags', { params }),
   create: (data) => api.post('/tags', data),
   delete: (id) => api.delete(`/tags/${id}`),
 };

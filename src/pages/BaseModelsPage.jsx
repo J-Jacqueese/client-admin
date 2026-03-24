@@ -7,6 +7,8 @@ import axios from 'axios';
 const API_BASE_URL = 'https://deepseek.club/model_api/';
 function BaseModelsPage() {
   const [baseModels, setBaseModels] = useState([]);
+  const [keyword, setKeyword] = useState('');
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -15,14 +17,20 @@ function BaseModelsPage() {
   const [form] = Form.useForm();
 
   useEffect(() => {
-    loadBaseModels();
-  }, []);
+    const timer = setTimeout(() => {
+      loadBaseModels(keyword);
+    }, 250);
 
-  const loadBaseModels = async () => {
+    return () => clearTimeout(timer);
+  }, [keyword]);
+
+  const loadBaseModels = async (searchValue = '') => {
     setLoading(true);
     try {
       // API_BASE_URL 末尾已带 `/`，这里不要再拼一个前导 `/`，避免出现 `//base-models`
-      const response = await axios.get(`${API_BASE_URL}base-models`);
+      const response = await axios.get(`${API_BASE_URL}base-models`, {
+        params: { search: searchValue.trim() || undefined },
+      });
       setBaseModels(response.data.data);
     } catch (error) {
       console.error('Failed to load base models:', error);
@@ -66,7 +74,7 @@ function BaseModelsPage() {
       }
       
       setModalVisible(false);
-      loadBaseModels();
+      loadBaseModels(keyword);
     } catch (error) {
       console.error('Failed to submit:', error);
       if (error.response?.data?.message) {
@@ -81,7 +89,7 @@ function BaseModelsPage() {
     try {
       await axios.delete(`${API_BASE_URL}base-models/${id}`);
       message.success('删除成功');
-      loadBaseModels();
+      loadBaseModels(keyword);
     } catch (error) {
       console.error('Failed to delete:', error);
       if (error.response?.data?.message) {
@@ -92,11 +100,35 @@ function BaseModelsPage() {
     }
   };
 
+  const handleBatchDelete = async () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要删除的基座模型');
+      return;
+    }
+
+    const results = await Promise.allSettled(
+      selectedRowKeys.map((id) => axios.delete(`${API_BASE_URL}base-models/${id}`))
+    );
+    const successCount = results.filter((result) => result.status === 'fulfilled').length;
+    const failedCount = selectedRowKeys.length - successCount;
+
+    if (successCount > 0 && failedCount === 0) {
+      message.success(`批量删除成功，共删除 ${successCount} 条`);
+    } else if (successCount > 0) {
+      message.warning(`批量删除完成，成功 ${successCount} 条，失败 ${failedCount} 条`);
+    } else {
+      message.error('批量删除失败');
+    }
+
+    setSelectedRowKeys([]);
+    loadBaseModels(keyword);
+  };
+
   const handleToggleStatus = async (id) => {
     try {
       await axios.patch(`${API_BASE_URL}base-models/${id}/toggle`);
       message.success('状态更新成功');
-      loadBaseModels();
+      loadBaseModels(keyword);
     } catch (error) {
       console.error('Failed to toggle status:', error);
       message.error('更新状态失败');
@@ -216,14 +248,38 @@ function BaseModelsPage() {
           <h1 className="text-2xl font-bold text-gray-800">基座模型管理</h1>
           <p className="text-sm text-gray-500 mt-1">管理可用的模型基座配置</p>
         </div>
-        <Button
-          type="primary"
-          size="large"
-          icon={<PlusOutlined />}
-          onClick={handleAdd}
-        >
-          新增基座模型
-        </Button>
+        <Space>
+          <Popconfirm
+            title={`确定删除选中的 ${selectedRowKeys.length} 个基座模型吗？`}
+            description="如果有模型正在使用某个基座，该项会删除失败。"
+            onConfirm={handleBatchDelete}
+            okText="确定"
+            cancelText="取消"
+            disabled={selectedRowKeys.length === 0}
+          >
+            <Button danger icon={<DeleteOutlined />} disabled={selectedRowKeys.length === 0}>
+              批量删除
+            </Button>
+          </Popconfirm>
+          <Button
+            type="primary"
+            size="large"
+            icon={<PlusOutlined />}
+            onClick={handleAdd}
+          >
+            新增基座模型
+          </Button>
+        </Space>
+      </div>
+
+      <div className="mb-4">
+        <Input
+          allowClear
+          value={keyword}
+          placeholder="请输入基座名称，支持模糊查询"
+          onChange={(e) => setKeyword(e.target.value)}
+          style={{ maxWidth: 360 }}
+        />
       </div>
 
       <Table
@@ -231,6 +287,10 @@ function BaseModelsPage() {
         dataSource={baseModels}
         rowKey="id"
         loading={loading}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: setSelectedRowKeys,
+        }}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,

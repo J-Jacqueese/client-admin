@@ -5,6 +5,8 @@ import { categoryAPI } from '../services/api';
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState([]);
+  const [keyword, setKeyword] = useState('');
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -13,13 +15,17 @@ export default function CategoriesPage() {
   const [form] = Form.useForm();
 
   useEffect(() => {
-    loadCategories();
-  }, []);
+    const timer = setTimeout(() => {
+      loadCategories(keyword);
+    }, 250);
 
-  const loadCategories = async () => {
+    return () => clearTimeout(timer);
+  }, [keyword]);
+
+  const loadCategories = async (searchValue = '') => {
     setLoading(true);
     try {
-      const response = await categoryAPI.getAll();
+      const response = await categoryAPI.getAll({ search: searchValue.trim() || undefined });
       setCategories(response.data.data);
     } catch (error) {
       message.error('加载分类列表失败');
@@ -33,7 +39,6 @@ export default function CategoriesPage() {
     setEditingCategory(null);
     form.resetFields();
     form.setFieldsValue({
-      type: 'model',
       sort_order: 0,
     });
     setModalOpen(true);
@@ -59,11 +64,33 @@ export default function CategoriesPage() {
     try {
       await categoryAPI.delete(id);
       message.success('删除成功');
-      loadCategories();
+      loadCategories(keyword);
     } catch (error) {
       console.error('Failed to delete category:', error);
       message.error('删除失败');
     }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要删除的分类');
+      return;
+    }
+
+    const results = await Promise.allSettled(selectedRowKeys.map((id) => categoryAPI.delete(id)));
+    const successCount = results.filter((result) => result.status === 'fulfilled').length;
+    const failedCount = selectedRowKeys.length - successCount;
+
+    if (successCount > 0 && failedCount === 0) {
+      message.success(`批量删除成功，共删除 ${successCount} 条`);
+    } else if (successCount > 0) {
+      message.warning(`批量删除完成，成功 ${successCount} 条，失败 ${failedCount} 条`);
+    } else {
+      message.error('批量删除失败');
+    }
+
+    setSelectedRowKeys([]);
+    loadCategories(keyword);
   };
 
   const handleSubmit = async (values) => {
@@ -76,7 +103,7 @@ export default function CategoriesPage() {
         message.success('创建成功');
       }
       setModalOpen(false);
-      loadCategories();
+      loadCategories(keyword);
     } catch (error) {
       console.error('Failed to save category:', error);
       message.error('保存失败');
@@ -167,9 +194,32 @@ export default function CategoriesPage() {
     <div className="p-6">
       <div className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-bold">分类管理</h1>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          添加分类
-        </Button>
+        <Space>
+          <Popconfirm
+            title={`确定删除选中的 ${selectedRowKeys.length} 个分类吗？`}
+            onConfirm={handleBatchDelete}
+            okText="确定"
+            cancelText="取消"
+            disabled={selectedRowKeys.length === 0}
+          >
+            <Button danger icon={<DeleteOutlined />} disabled={selectedRowKeys.length === 0}>
+              批量删除
+            </Button>
+          </Popconfirm>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            添加分类
+          </Button>
+        </Space>
+      </div>
+
+      <div className="mb-4">
+        <Input
+          allowClear
+          value={keyword}
+          placeholder="请输入分类名称，支持模糊查询"
+          onChange={(e) => setKeyword(e.target.value)}
+          style={{ maxWidth: 360 }}
+        />
       </div>
 
       <Table
@@ -177,6 +227,10 @@ export default function CategoriesPage() {
         dataSource={categories}
         loading={loading}
         rowKey="id"
+        rowSelection={{
+          selectedRowKeys,
+          onChange: setSelectedRowKeys,
+        }}
         pagination={{
           showSizeChanger: true,
           showQuickJumper: true,

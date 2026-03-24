@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, message, Space, Tag, Popconfirm, Divider, Drawer, Descriptions } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, InputNumber, message, Space, Tag, Popconfirm, Divider, Drawer, Descriptions } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, FileOutlined, MinusCircleOutlined, EyeOutlined } from '@ant-design/icons';
 import { modelAPI, categoryAPI, tagAPI, baseModelAPI } from '../services/api';
 
@@ -20,6 +20,8 @@ const MODEL_TYPE_META = {
 
 export default function ModelsPage() {
   const [models, setModels] = useState([]);
+  const [keyword, setKeyword] = useState('');
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [categories, setCategories] = useState([]);
   const [tags, setTags] = useState([]);
   const [baseModels, setBaseModels] = useState([]);
@@ -31,16 +33,23 @@ export default function ModelsPage() {
   const [form] = Form.useForm();
 
   useEffect(() => {
-    loadModels();
     loadCategories();
     loadTags();
     loadBaseModels();
   }, []);
 
-  const loadModels = async () => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadModels(keyword);
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [keyword]);
+
+  const loadModels = async (searchValue = '') => {
     setLoading(true);
     try {
-      const response = await modelAPI.getAll({});
+      const response = await modelAPI.getAll({ search: searchValue.trim() || undefined });
       setModels(response.data.data);
     } catch (error) {
       message.error('加载模型列表失败');
@@ -52,7 +61,7 @@ export default function ModelsPage() {
 
   const loadCategories = async () => {
     try {
-      const response = await categoryAPI.getAll('model');
+      const response = await categoryAPI.getAll({ type: 'model' });
       setCategories(response.data.data);
     } catch (error) {
       console.error('Failed to load categories:', error);
@@ -78,6 +87,7 @@ export default function ModelsPage() {
   };
 
   const handleCreate = () => {
+    loadCategories();
     setEditingModel(null);
     form.resetFields();
     setModalOpen(true);
@@ -89,6 +99,7 @@ export default function ModelsPage() {
   };
 
   const handleEdit = (model) => {
+    loadCategories();
     setEditingModel(model);
     
     // 处理下载链接数组
@@ -122,6 +133,9 @@ export default function ModelsPage() {
       readme: model.readme || '',
       prompt_example: model.prompt_example || '',
       comparison: model.comparison || '',
+      likes: model.likes ?? 0,
+      downloads: model.downloads ?? 0,
+      stars: model.stars ?? 0,
       download_links: downloadLinks,
       files: files,
     });
@@ -132,11 +146,33 @@ export default function ModelsPage() {
     try {
       await modelAPI.delete(id);
       message.success('删除成功');
-      loadModels();
+      loadModels(keyword);
     } catch (error) {
       console.error('Failed to delete model:', error);
       message.error('删除失败');
     }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要删除的模型');
+      return;
+    }
+
+    const results = await Promise.allSettled(selectedRowKeys.map((id) => modelAPI.delete(id)));
+    const successCount = results.filter((result) => result.status === 'fulfilled').length;
+    const failedCount = selectedRowKeys.length - successCount;
+
+    if (successCount > 0 && failedCount === 0) {
+      message.success(`批量删除成功，共删除 ${successCount} 条`);
+    } else if (successCount > 0) {
+      message.warning(`批量删除完成，成功 ${successCount} 条，失败 ${failedCount} 条`);
+    } else {
+      message.error('批量删除失败');
+    }
+
+    setSelectedRowKeys([]);
+    loadModels(keyword);
   };
 
   const handleSubmit = async (values) => {
@@ -156,7 +192,7 @@ export default function ModelsPage() {
         message.success('创建成功');
       }
       setModalOpen(false);
-      loadModels();
+      loadModels(keyword);
     } catch (error) {
       console.error('Failed to save model:', error);
       message.error('保存失败');
@@ -240,6 +276,13 @@ export default function ModelsPage() {
       sorter: (a, b) => (a.downloads || 0) - (b.downloads || 0),
     },
     {
+      title: 'Star',
+      dataIndex: 'stars',
+      key: 'stars',
+      width: 90,
+      sorter: (a, b) => (a.stars || 0) - (b.stars || 0),
+    },
+    {
       title: '操作',
       key: 'action',
       width: 200,
@@ -286,13 +329,36 @@ export default function ModelsPage() {
     <div className="p-6">
       <div className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-bold">模型管理</h1>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={handleCreate}
-        >
-          添加模型
-        </Button>
+        <Space>
+          <Popconfirm
+            title={`确定删除选中的 ${selectedRowKeys.length} 个模型吗？`}
+            onConfirm={handleBatchDelete}
+            okText="确定"
+            cancelText="取消"
+            disabled={selectedRowKeys.length === 0}
+          >
+            <Button danger icon={<DeleteOutlined />} disabled={selectedRowKeys.length === 0}>
+              批量删除
+            </Button>
+          </Popconfirm>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleCreate}
+          >
+            添加模型
+          </Button>
+        </Space>
+      </div>
+
+      <div className="mb-4">
+        <Input
+          allowClear
+          value={keyword}
+          placeholder="请输入模型名称，支持模糊查询"
+          onChange={(e) => setKeyword(e.target.value)}
+          style={{ maxWidth: 360 }}
+        />
       </div>
 
       <Table
@@ -300,6 +366,10 @@ export default function ModelsPage() {
         dataSource={models}
         loading={loading}
         rowKey="id"
+        rowSelection={{
+          selectedRowKeys,
+          onChange: setSelectedRowKeys,
+        }}
         scroll={{ x: 1200 }}
         pagination={{
           showSizeChanger: true,
@@ -399,6 +469,17 @@ export default function ModelsPage() {
 
           <Form.Item label="效果对标说明" name="comparison">
             <TextArea rows={2} placeholder="请输入效果对标说明" />
+          </Form.Item>
+
+          <Divider orientation="left">统计数据</Divider>
+          <Form.Item label="点赞数" name="likes">
+            <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="如：1200" />
+          </Form.Item>
+          <Form.Item label="下载量" name="downloads">
+            <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="如：5800" />
+          </Form.Item>
+          <Form.Item label="Star 数" name="stars">
+            <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="如：2300" />
           </Form.Item>
 
           <Divider orientation="left">
@@ -562,6 +643,7 @@ export default function ModelsPage() {
             <Descriptions title="统计数据" bordered column={3}>
               <Descriptions.Item label="点赞数">{viewingModel.likes || 0}</Descriptions.Item>
               <Descriptions.Item label="下载量">{viewingModel.downloads || 0}</Descriptions.Item>
+              <Descriptions.Item label="Star 数">{viewingModel.stars || 0}</Descriptions.Item>
               <Descriptions.Item label="浏览量">{viewingModel.views || 0}</Descriptions.Item>
             </Descriptions>
 

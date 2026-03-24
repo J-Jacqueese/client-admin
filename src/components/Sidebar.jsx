@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   DashboardOutlined,
   AppstoreOutlined,
@@ -8,10 +8,13 @@ import {
   DatabaseOutlined,
   CalendarOutlined,
   AppstoreAddOutlined,
+  LogoutOutlined,
 } from '@ant-design/icons';
 
 export default function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const AUTH_STORAGE_KEY = 'client_admin_auth';
 
   const menuItems = [
     { path: '/dashboard', icon: DashboardOutlined, label: '仪表盘' },
@@ -23,6 +26,11 @@ export default function Sidebar() {
     { path: '/events', icon: CalendarOutlined, label: '活动管理' },
     { path: '/projects', icon: AppstoreAddOutlined, label: '项目管理' },
   ];
+
+  const handleLogout = () => {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    navigate('/login', { replace: true });
+  };
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 min-h-screen">
@@ -57,6 +65,17 @@ export default function Sidebar() {
             );
           })}
         </nav>
+
+        <div className="mt-6 pt-4 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition-all"
+          >
+            <LogoutOutlined style={{ fontSize: 20 }} />
+            <span>退出登录</span>
+          </button>
+        </div>
       </div>
     </aside>
   );

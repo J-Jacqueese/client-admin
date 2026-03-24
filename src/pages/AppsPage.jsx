@@ -7,6 +7,8 @@ const { TextArea } = Input;
 
 export default function AppsPage() {
   const [apps, setApps] = useState([]);
+  const [keyword, setKeyword] = useState('');
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -29,14 +31,21 @@ export default function AppsPage() {
   };
 
   useEffect(() => {
-    loadApps();
     loadCategories();
   }, []);
 
-  const loadApps = async () => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadApps(keyword);
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [keyword]);
+
+  const loadApps = async (searchValue = '') => {
     setLoading(true);
     try {
-      const response = await appAPI.getAll({});
+      const response = await appAPI.getAll({ search: searchValue.trim() || undefined });
       setApps(response.data.data);
     } catch (error) {
       message.error('加载应用列表失败');
@@ -48,7 +57,7 @@ export default function AppsPage() {
 
   const loadCategories = async () => {
     try {
-      const response = await categoryAPI.getAll('app');
+      const response = await categoryAPI.getAll({});
       setCategories(response.data.data);
     } catch (error) {
       console.error('Failed to load categories:', error);
@@ -56,6 +65,7 @@ export default function AppsPage() {
   };
 
   const handleCreate = () => {
+    loadCategories();
     setEditingApp(null);
     form.resetFields();
     setModalOpen(true);
@@ -67,6 +77,7 @@ export default function AppsPage() {
   };
 
   const handleEdit = (app) => {
+    loadCategories();
     setEditingApp(app);
 
     const downloadLinks = normalizeDownloadLinks(app.download_links);
@@ -77,6 +88,8 @@ export default function AppsPage() {
       version: app.version || '',
       base_model: app.base_model || '',
       upvotes: app.upvotes ?? 0,
+      downloads: app.downloads ?? 0,
+      stars: app.stars ?? 0,
       download_links: downloadLinks,
       category_id: app.category_id || undefined,
       description: app.description || '',
@@ -92,11 +105,33 @@ export default function AppsPage() {
     try {
       await appAPI.delete(id);
       message.success('删除成功');
-      loadApps();
+      loadApps(keyword);
     } catch (error) {
       console.error('Failed to delete app:', error);
       message.error('删除失败');
     }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要删除的应用');
+      return;
+    }
+
+    const results = await Promise.allSettled(selectedRowKeys.map((id) => appAPI.delete(id)));
+    const successCount = results.filter((result) => result.status === 'fulfilled').length;
+    const failedCount = selectedRowKeys.length - successCount;
+
+    if (successCount > 0 && failedCount === 0) {
+      message.success(`批量删除成功，共删除 ${successCount} 条`);
+    } else if (successCount > 0) {
+      message.warning(`批量删除完成，成功 ${successCount} 条，失败 ${failedCount} 条`);
+    } else {
+      message.error('批量删除失败');
+    }
+
+    setSelectedRowKeys([]);
+    loadApps(keyword);
   };
 
   const handleSubmit = async (values) => {
@@ -114,7 +149,7 @@ export default function AppsPage() {
         message.success('创建成功');
       }
       setModalOpen(false);
-      loadApps();
+      loadApps(keyword);
     } catch (error) {
       console.error('Failed to save app:', error);
       message.error('保存失败');
@@ -127,6 +162,37 @@ export default function AppsPage() {
       dataIndex: 'id',
       key: 'id',
       width: 80,
+    },
+    {
+      title: '应用图标',
+      dataIndex: 'icon_bg',
+      key: 'icon_bg',
+      width: 110,
+      render: (iconUrl, record) => (
+        iconUrl ? (
+          <img
+            src={iconUrl}
+            alt={record.name || '应用图标'}
+            style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              background: '#f3f4f6',
+              color: '#9ca3af',
+              fontSize: 12,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            无图
+          </div>
+        )
+      ),
     },
     {
       title: '应用名称',
@@ -153,6 +219,20 @@ export default function AppsPage() {
       key: 'upvotes',
       width: 100,
       sorter: (a, b) => (a.upvotes || 0) - (b.upvotes || 0),
+    },
+    {
+      title: '下载量',
+      dataIndex: 'downloads',
+      key: 'downloads',
+      width: 100,
+      sorter: (a, b) => (a.downloads || 0) - (b.downloads || 0),
+    },
+    {
+      title: 'Star 数',
+      dataIndex: 'stars',
+      key: 'stars',
+      width: 100,
+      sorter: (a, b) => (a.stars || 0) - (b.stars || 0),
     },
     {
       title: '浏览量',
@@ -215,9 +295,32 @@ export default function AppsPage() {
     <div className="p-6">
       <div className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-bold">应用管理</h1>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          添加应用
-        </Button>
+        <Space>
+          <Popconfirm
+            title={`确定删除选中的 ${selectedRowKeys.length} 个应用吗？`}
+            onConfirm={handleBatchDelete}
+            okText="确定"
+            cancelText="取消"
+            disabled={selectedRowKeys.length === 0}
+          >
+            <Button danger icon={<DeleteOutlined />} disabled={selectedRowKeys.length === 0}>
+              批量删除
+            </Button>
+          </Popconfirm>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            添加应用
+          </Button>
+        </Space>
+      </div>
+
+      <div className="mb-4">
+        <Input
+          allowClear
+          value={keyword}
+          placeholder="请输入应用名称，支持模糊查询"
+          onChange={(e) => setKeyword(e.target.value)}
+          style={{ maxWidth: 360 }}
+        />
       </div>
 
       <Table
@@ -225,6 +328,10 @@ export default function AppsPage() {
         dataSource={apps}
         loading={loading}
         rowKey="id"
+        rowSelection={{
+          selectedRowKeys,
+          onChange: setSelectedRowKeys,
+        }}
         scroll={{ x: 1200 }}
         pagination={{
           showSizeChanger: true,
@@ -283,13 +390,25 @@ export default function AppsPage() {
                 <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="如：1200" />
               </Form.Item>
             </Col>
+            <Col span={12}>
+              <Form.Item label="基础下载量" name="downloads" tooltip="用于前端展示的预设下载量，仅后台可修改">
+                <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="如：5800" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="基础 Star 数" name="stars" tooltip="用于前端展示的预设 Star 数，仅后台可修改">
+                <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="如：2600" />
+              </Form.Item>
+            </Col>
           </Row>
 
           <Form.Item label="分类" name="category_id">
-            <Select placeholder="选择分类" allowClear>
+            <Select placeholder="选择分类" allowClear onDropdownVisibleChange={(open) => open && loadCategories()}>
               {categories.map((cat) => (
                 <Select.Option key={cat.id} value={cat.id}>
-                  {cat.name}
+                  [{cat.id}] {cat.name}（{cat.type === 'app' ? '应用' : '模型'}）
                 </Select.Option>
               ))}
             </Select>
@@ -417,6 +536,8 @@ export default function AppsPage() {
 
             <Descriptions title="统计数据" bordered column={2}>
               <Descriptions.Item label="点赞数">{viewingApp.upvotes || 0}</Descriptions.Item>
+              <Descriptions.Item label="下载量">{viewingApp.downloads || 0}</Descriptions.Item>
+              <Descriptions.Item label="Star 数">{viewingApp.stars || 0}</Descriptions.Item>
               <Descriptions.Item label="浏览量">{viewingApp.views || 0}</Descriptions.Item>
             </Descriptions>
 

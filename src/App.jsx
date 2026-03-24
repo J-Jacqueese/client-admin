@@ -1,7 +1,8 @@
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import Sidebar from './components/Sidebar';
+import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import ModelsPage from './pages/ModelsPage';
 import AppsPage from './pages/AppsPage';
@@ -14,6 +15,35 @@ import EventEditPage from './pages/EventEditPage';
 import ProjectEditPage from './pages/ProjectEditPage';
 import EventCreatePage from './pages/EventCreatePage';
 import ProjectCreatePage from './pages/ProjectCreatePage';
+
+const AUTH_STORAGE_KEY = 'client_admin_auth';
+
+function isAuthenticated() {
+  return localStorage.getItem(AUTH_STORAGE_KEY) === '1';
+}
+
+function ProtectedLayout() {
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return (
+    <div className="flex min-h-screen bg-gray-100">
+      <Sidebar />
+      <div className="flex-1 bg-gray-100 min-w-0 overflow-auto">
+        <Outlet />
+      </div>
+    </div>
+  );
+}
+
+function LoginRoute() {
+  if (isAuthenticated()) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <LoginPage />;
+}
 
 function App() {
   return (
@@ -39,26 +69,25 @@ function App() {
       }}
     >
       <Router>
-        <div className="flex min-h-screen bg-gray-100">
-          <Sidebar />
-          <div className="flex-1 bg-gray-100 min-w-0 overflow-auto">
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/models" element={<ModelsPage />} />
-              <Route path="/apps" element={<AppsPage />} />
-              <Route path="/categories" element={<CategoriesPage />} />
-              <Route path="/tags" element={<TagsPage />} />
-              <Route path="/base-models" element={<BaseModelsPage />} />
-              <Route path="/events" element={<EventsPage />} />
-              <Route path="/events/create" element={<EventCreatePage />} />
-              <Route path="/events/:id/edit" element={<EventEditPage />} />
-              <Route path="/projects" element={<ProjectsPage />} />
-              <Route path="/projects/create" element={<ProjectCreatePage />} />
-              <Route path="/projects/:id/edit" element={<ProjectEditPage />} />
-            </Routes>
-          </div>
-        </div>
+        <Routes>
+          <Route path="/login" element={<LoginRoute />} />
+          <Route element={<ProtectedLayout />}>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/models" element={<ModelsPage />} />
+            <Route path="/apps" element={<AppsPage />} />
+            <Route path="/categories" element={<CategoriesPage />} />
+            <Route path="/tags" element={<TagsPage />} />
+            <Route path="/base-models" element={<BaseModelsPage />} />
+            <Route path="/events" element={<EventsPage />} />
+            <Route path="/events/create" element={<EventCreatePage />} />
+            <Route path="/events/:id/edit" element={<EventEditPage />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/create" element={<ProjectCreatePage />} />
+            <Route path="/projects/:id/edit" element={<ProjectEditPage />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </Router>
     </ConfigProvider>
   );
