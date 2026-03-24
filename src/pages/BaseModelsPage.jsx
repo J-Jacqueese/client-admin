@@ -4,7 +4,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CheckCircleOut
 import axios from 'axios';
 
 // 统一使用 model_api 作为后端前缀
-const API_BASE_URL = 'https://dpsk.ai/model_api/';
+const API_BASE_URL = 'https://deepseek.club/model_api/';
 function BaseModelsPage() {
   const [baseModels, setBaseModels] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -21,7 +21,8 @@ function BaseModelsPage() {
   const loadBaseModels = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/base-models`);
+      // API_BASE_URL 末尾已带 `/`，这里不要再拼一个前导 `/`，避免出现 `//base-models`
+      const response = await axios.get(`${API_BASE_URL}base-models`);
       setBaseModels(response.data.data);
     } catch (error) {
       console.error('Failed to load base models:', error);

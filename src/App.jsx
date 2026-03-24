@@ -8,6 +8,12 @@ import AppsPage from './pages/AppsPage';
 import CategoriesPage from './pages/CategoriesPage';
 import TagsPage from './pages/TagsPage';
 import BaseModelsPage from './pages/BaseModelsPage';
+import EventsPage from './pages/EventsPage';
+import ProjectsPage from './pages/ProjectsPage';
+import EventEditPage from './pages/EventEditPage';
+import ProjectEditPage from './pages/ProjectEditPage';
+import EventCreatePage from './pages/EventCreatePage';
+import ProjectCreatePage from './pages/ProjectCreatePage';
 
 function App() {
   return (
@@ -44,6 +50,12 @@ function App() {
               <Route path="/categories" element={<CategoriesPage />} />
               <Route path="/tags" element={<TagsPage />} />
               <Route path="/base-models" element={<BaseModelsPage />} />
+              <Route path="/events" element={<EventsPage />} />
+              <Route path="/events/create" element={<EventCreatePage />} />
+              <Route path="/events/:id/edit" element={<EventEditPage />} />
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/projects/create" element={<ProjectCreatePage />} />
+              <Route path="/projects/:id/edit" element={<ProjectEditPage />} />
             </Routes>
           </div>
         </div>

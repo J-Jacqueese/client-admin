@@ -6,6 +6,8 @@ import {
   FolderOutlined,
   TagsOutlined,
   DatabaseOutlined,
+  CalendarOutlined,
+  AppstoreAddOutlined,
 } from '@ant-design/icons';
 
 export default function Sidebar() {
@@ -18,6 +20,8 @@ export default function Sidebar() {
     { path: '/categories', icon: FolderOutlined, label: '分类管理' },
     { path: '/tags', icon: TagsOutlined, label: '标签管理' },
     { path: '/base-models', icon: DatabaseOutlined, label: '基座管理' },
+    { path: '/events', icon: CalendarOutlined, label: '活动管理' },
+    { path: '/projects', icon: AppstoreAddOutlined, label: '项目管理' },
   ];
 
   return (

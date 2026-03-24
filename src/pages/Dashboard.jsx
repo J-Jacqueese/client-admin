@@ -5,6 +5,8 @@ import {
   RocketOutlined,
   FolderOutlined,
   TagsOutlined,
+  CalendarOutlined,
+  AppstoreAddOutlined,
   DownloadOutlined,
   HeartOutlined,
   TrophyOutlined,
@@ -34,7 +36,10 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <Spin size="large" tip="加载中..." />
+        <div className="flex flex-col items-center gap-3">
+          <Spin size="large" />
+          <div className="text-gray-500 text-sm">加载中...</div>
+        </div>
       </div>
     );
   }
@@ -91,6 +96,31 @@ export default function Dashboard() {
               prefix={<TagsOutlined style={{ color: '#faad14' }} />}
               valueStyle={{ color: '#faad14' }}
             />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} className="mb-6">
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="活动总数"
+              value={stats?.events?.count || 0}
+              prefix={<CalendarOutlined style={{ color: '#1890ff' }} />}
+              valueStyle={{ color: '#1890ff' }}
+            />
+            <div className="text-xs text-gray-500 mt-2">当前报名人次：{stats?.events?.totalCurrentParticipants || 0}</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="项目总数"
+              value={stats?.projects?.count || 0}
+              prefix={<AppstoreAddOutlined style={{ color: '#722ed1' }} />}
+              valueStyle={{ color: '#722ed1' }}
+            />
+            <div className="text-xs text-gray-500 mt-2">总 Stars：{stats?.projects?.totalStars || 0}</div>
           </Card>
         </Col>
       </Row>
