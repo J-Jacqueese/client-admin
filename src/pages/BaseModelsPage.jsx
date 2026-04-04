@@ -4,7 +4,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CheckCircleOut
 import axios from 'axios';
 
 // 统一使用 model_api 作为后端前缀
-const API_BASE_URL = 'https://deepseek.club/model_api/';
+const API_BASE_URL = 'http://localhost:3000/model_api/';
 function BaseModelsPage() {
   const [baseModels, setBaseModels] = useState([]);
   const [keyword, setKeyword] = useState('');

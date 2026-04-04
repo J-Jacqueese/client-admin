@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Form, Input, Select, Button, message, Spin } from 'antd';
+import { Form, Input, Select, Button, message, Spin, Upload, InputNumber, Space } from 'antd';
+import MDEditor from '@uiw/react-md-editor';
+import '@uiw/react-md-editor/markdown-editor.css';
 import { eventAPI } from '../services/api';
+import { resolveAdminMediaUrl } from '../utils/mediaUrl';
 
 const { TextArea } = Input;
 
@@ -15,6 +18,14 @@ function safeJsonParse(jsonText, fallback) {
   } catch (e) {
     return { __json_parse_error: String(e?.message || e) };
   }
+}
+
+function FullDescEditor({ value, onChange }) {
+  return (
+    <div data-color-mode="light" className="border border-slate-200 rounded-lg overflow-hidden bg-white">
+      <MDEditor value={value || ''} onChange={onChange} height={420} visibleDragbar={false} />
+    </div>
+  );
 }
 
 export default function EventEditPage() {
@@ -51,6 +62,7 @@ export default function EventEditPage() {
           current_participants: ev.current_participants ?? 0,
           registration_url: ev.registration_url || '',
           likes: ev.likes ?? 0,
+          sort_weight: ev.sort_weight ?? 0,
           approval_status: ev.approval_status || 'pending',
           speakers_json: JSON.stringify(ev.speakers || [], null, 2),
           tags_json: JSON.stringify(ev.tags || [], null, 2),
@@ -108,6 +120,7 @@ export default function EventEditPage() {
         sponsors: sponsorsParsed,
         registration_url: values.registration_url || null,
         likes: values.likes ?? 0,
+        sort_weight: values.sort_weight ?? 0,
         approval_status: values.approval_status || 'pending',
       });
       message.success('更新成功');
@@ -149,13 +162,47 @@ export default function EventEditPage() {
           <Input />
         </Form.Item>
 
-        <Form.Item label="简介 (desc)" name="desc">
-          <TextArea rows={3} />
+        <Form.Item
+          label="排序权重"
+          name="sort_weight"
+          extra="数字越大，前台「AI 活动」列表越靠前展示；相同权重时仍按开始时间等规则排序。"
+        >
+          <InputNumber min={0} max={999999} placeholder="0" className="w-full max-w-xs" />
         </Form.Item>
 
-        <Form.Item label="完整详情 (full_desc)" name="full_desc">
-          <TextArea rows={8} />
+        <Form.Item label="简介 (desc)" name="desc">
+          <TextArea rows={3} placeholder="列表卡片展示用，建议两行以内" />
         </Form.Item>
+
+        <Form.Item
+          label="活动完整详情（Markdown）"
+          name="full_desc"
+          tooltip="支持标题、列表、链接等；图片请用下方按钮上传后自动插入"
+        >
+          <FullDescEditor />
+        </Form.Item>
+        <div className="mb-6">
+          <Upload
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            showUploadList={false}
+            customRequest={async ({ file, onSuccess, onError }) => {
+              try {
+                const resp = await eventAPI.uploadEventImage(file);
+                const path = resp.data?.url;
+                if (!path) throw new Error('no url');
+                const cur = form.getFieldValue('full_desc') || '';
+                form.setFieldsValue({ full_desc: `${cur}\n\n![](${path})\n\n` });
+                onSuccess(resp.data);
+                message.success('已上传并插入图片（Markdown）');
+              } catch (e) {
+                onError(e);
+                message.error('图片上传失败');
+              }
+            }}
+          >
+            <Button type="dashed">上传图片并插入到详情</Button>
+          </Upload>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Form.Item label="类型 (event_type)" name="type" rules={[{ required: true, message: '请输入类型' }]}>
@@ -199,8 +246,38 @@ export default function EventEditPage() {
           </Form.Item>
         </div>
 
-        <Form.Item label="封面图 (cover_image)" name="cover_image">
-          <Input />
+        <Form.Item label="封面图">
+          <Space direction="vertical" size="middle" className="w-full">
+            <Form.Item name="cover_image" noStyle>
+              <Input placeholder="图片地址，或点击下方上传（存为 /model_api/uploads/...）" />
+            </Form.Item>
+            <Upload
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              showUploadList={false}
+              customRequest={async ({ file, onSuccess, onError }) => {
+                try {
+                  const resp = await eventAPI.uploadEventImage(file);
+                  const url = resp.data?.url;
+                  form.setFieldsValue({ cover_image: url });
+                  onSuccess(resp.data);
+                  message.success('封面上传成功');
+                } catch (e) {
+                  onError(e);
+                  message.error('封面上传失败');
+                }
+              }}
+            >
+              <Button>上传封面图</Button>
+            </Upload>
+            <Form.Item noStyle shouldUpdate>
+              {() => {
+                const u = form.getFieldValue('cover_image');
+                return u ? (
+                  <img src={resolveAdminMediaUrl(u)} alt="封面预览" className="max-h-44 rounded-lg border border-slate-200" />
+                ) : null;
+              }}
+            </Form.Item>
+          </Space>
         </Form.Item>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -262,4 +339,3 @@ export default function EventEditPage() {
     </div>
   );
 }
-

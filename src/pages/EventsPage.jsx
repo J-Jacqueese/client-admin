@@ -76,6 +76,15 @@ export default function EventsPage() {
       ellipsis: true,
     },
     {
+      title: '排序权重',
+      dataIndex: 'sort_weight',
+      key: 'sort_weight',
+      width: 108,
+      sorter: (a, b) => Number(a.sort_weight ?? 0) - Number(b.sort_weight ?? 0),
+      defaultSortOrder: 'descend',
+      render: (v) => <span className="tabular-nums font-medium">{v != null ? v : 0}</span>,
+    },
+    {
       title: '类型',
       dataIndex: 'event_type',
       key: 'event_type',
@@ -216,6 +225,10 @@ export default function EventsPage() {
           <div className="space-y-6">
             <Descriptions column={1} bordered>
               <Descriptions.Item label="活动名称">{viewEvent.title}</Descriptions.Item>
+              <Descriptions.Item label="排序权重">
+                {viewEvent.sort_weight != null ? viewEvent.sort_weight : 0}
+                <span className="text-gray-400 text-xs ml-2">（越大前台列表越靠前）</span>
+              </Descriptions.Item>
               <Descriptions.Item label="类型">{viewEvent.event_type}</Descriptions.Item>
               <Descriptions.Item label="形式">{viewEvent.event_mode}</Descriptions.Item>
               <Descriptions.Item label="状态">{viewEvent.event_status}</Descriptions.Item>

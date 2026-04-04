@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
+    "@uiw/react-md-editor": "^4.1.0",
     "antd": "^6.2.3",
     "axios": "^1.6.2",
     "dayjs": "^1.11.19",
