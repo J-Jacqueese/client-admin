@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Form, Input, Select, Button, message, Spin, Upload, InputNumber, Space } from 'antd';
 import MDEditor from '@uiw/react-md-editor';
 import '@uiw/react-md-editor/markdown-editor.css';
+import '@uiw/react-markdown-preview/markdown.css';
 import { eventAPI } from '../services/api';
 import { resolveAdminMediaUrl } from '../utils/mediaUrl';
 
