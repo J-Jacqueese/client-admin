@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // 统一使用 model_api 作为后端前缀
 // 优先使用环境变量 VITE_API_URL，未配置时默认走线上地址
-const API_BASE_URL = 'http://localhost:3000/model_api/';
+const API_BASE_URL = 'https://deepseek.club/model_api/';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -79,6 +79,16 @@ export const projectAPI = {
 // 统计API
 export const statsAPI = {
   get: () => api.get('/stats'),
+};
+
+// 热门话题API
+export const hotTopicAPI = {
+  getAll: (params) => api.get('/admin/hot-topics', { params }),
+  getById: (id) => api.get(`/admin/hot-topics/${id}`),
+  create: (data) => api.post('/admin/hot-topics', data),
+  update: (id, data) => api.put(`/admin/hot-topics/${id}`, data),
+  delete: (id) => api.delete(`/admin/hot-topics/${id}`),
+  batchSort: (items) => api.post('/admin/hot-topics/batch-sort', { items }),
 };
 
 export default api;

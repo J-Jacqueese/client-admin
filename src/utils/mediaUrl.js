@@ -4,7 +4,7 @@ export function resolveAdminMediaUrl(pathOrUrl) {
   const s = String(pathOrUrl).trim();
   if (!s) return '';
   if (/^https?:\/\//i.test(s)) return s;
-  const base = import.meta.env.VITE_API_URL || 'http://localhost:3000/model_api/';
+  const base = import.meta.env.VITE_API_URL || 'https://deepseek.club/model_api/';
   const origin = base.replace(/\/model_api\/?$/i, '').replace(/\/$/, '') || '';
   return s.startsWith('/') ? `${origin}${s}` : `${origin}/${s}`;
 }

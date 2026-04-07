@@ -9,6 +9,7 @@ import {
   CalendarOutlined,
   AppstoreAddOutlined,
   LogoutOutlined,
+  FireOutlined,
 } from '@ant-design/icons';
 
 export default function Sidebar() {
@@ -25,6 +26,7 @@ export default function Sidebar() {
     { path: '/base-models', icon: DatabaseOutlined, label: '基座管理' },
     { path: '/events', icon: CalendarOutlined, label: '活动管理' },
     { path: '/projects', icon: AppstoreAddOutlined, label: '项目管理' },
+    { path: '/hot-topics', icon: FireOutlined, label: '热门话题' },
   ];
 
   const handleLogout = () => {

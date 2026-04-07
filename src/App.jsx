@@ -15,6 +15,7 @@ import EventEditPage from './pages/EventEditPage';
 import ProjectEditPage from './pages/ProjectEditPage';
 import EventCreatePage from './pages/EventCreatePage';
 import ProjectCreatePage from './pages/ProjectCreatePage';
+import HotTopicsPage from './pages/HotTopicsPage';
 
 const AUTH_STORAGE_KEY = 'client_admin_auth';
 
@@ -85,6 +86,7 @@ function App() {
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/create" element={<ProjectCreatePage />} />
             <Route path="/projects/:id/edit" element={<ProjectEditPage />} />
+            <Route path="/hot-topics" element={<HotTopicsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
