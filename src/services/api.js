@@ -25,6 +25,12 @@ export const appAPI = {
   create: (data) => api.post('/apps', data),
   update: (id, data) => api.put(`/apps/${id}`, data),
   delete: (id) => api.delete(`/apps/${id}`),
+  /** 上传应用图标，multipart，字段名 file，限制1MB */
+  uploadIcon: (file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post('/upload/app-icon', fd);
+  },
 };
 
 // 分类相关API
@@ -63,6 +69,9 @@ export const eventAPI = {
     fd.append('file', file);
     return api.post('/upload/event-image', fd);
   },
+  // 报名管理
+  getRegistrations: (params) => api.get('/events/admin/registrations', { params }),
+  getRegistrationStats: () => api.get('/events/admin/registrations/stats'),
 };
 
 // 项目相关API（后台可传 include_all=1）

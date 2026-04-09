@@ -16,6 +16,7 @@ import ProjectEditPage from './pages/ProjectEditPage';
 import EventCreatePage from './pages/EventCreatePage';
 import ProjectCreatePage from './pages/ProjectCreatePage';
 import HotTopicsPage from './pages/HotTopicsPage';
+import EventRegistrationsPage from './pages/EventRegistrationsPage';
 
 const AUTH_STORAGE_KEY = 'client_admin_auth';
 
@@ -83,6 +84,7 @@ function App() {
             <Route path="/events" element={<EventsPage />} />
             <Route path="/events/create" element={<EventCreatePage />} />
             <Route path="/events/:id/edit" element={<EventEditPage />} />
+            <Route path="/event-registrations" element={<EventRegistrationsPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/create" element={<ProjectCreatePage />} />
             <Route path="/projects/:id/edit" element={<ProjectEditPage />} />

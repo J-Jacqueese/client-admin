@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Form, Input, Button, message, Upload, InputNumber, Space } from 'antd';
-import MDEditor from '@uiw/react-md-editor';
-import '@uiw/react-md-editor/markdown-editor.css';
-import '@uiw/react-markdown-preview/markdown.css';
+import MarkdownEditor from '../components/MarkdownEditor';
 import { eventAPI } from '../services/api';
 import { resolveAdminMediaUrl } from '../utils/mediaUrl';
 
@@ -17,14 +15,6 @@ function safeJsonParse(jsonText, fallback) {
   } catch (e) {
     return { __json_parse_error: String(e?.message || e) };
   }
-}
-
-function FullDescEditor({ value, onChange }) {
-  return (
-    <div data-color-mode="light" className="border border-slate-200 rounded-lg overflow-hidden bg-white">
-      <MDEditor value={value || ''} onChange={onChange} height={420} visibleDragbar={false} />
-    </div>
-  );
 }
 
 export default function EventCreatePage() {
@@ -142,31 +132,9 @@ export default function EventCreatePage() {
           <TextArea rows={3} placeholder="列表卡片展示用，建议两行以内" />
         </Form.Item>
 
-        <Form.Item label="活动完整详情（Markdown）" name="full_desc">
-          <FullDescEditor />
+        <Form.Item label="活动完整详情（Markdown）" name="full_desc" extra="支持Markdown语法，可粘贴图片，图片限制1MB">
+          <MarkdownEditor placeholder="请输入活动详情..." height={450} />
         </Form.Item>
-        <div className="mb-6">
-          <Upload
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            showUploadList={false}
-            customRequest={async ({ file, onSuccess, onError }) => {
-              try {
-                const resp = await eventAPI.uploadEventImage(file);
-                const path = resp.data?.url;
-                if (!path) throw new Error('no url');
-                const cur = form.getFieldValue('full_desc') || '';
-                form.setFieldsValue({ full_desc: `${cur}\n\n![](${path})\n\n` });
-                onSuccess(resp.data);
-                message.success('已上传并插入图片（Markdown）');
-              } catch (e) {
-                onError(e);
-                message.error('图片上传失败');
-              }
-            }}
-          >
-            <Button type="dashed">上传图片并插入到详情</Button>
-          </Upload>
-        </div>
 
         <Form.Item label="地点 (location)" name="location">
           <Input />

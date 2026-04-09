@@ -10,6 +10,7 @@ import {
   AppstoreAddOutlined,
   LogoutOutlined,
   FireOutlined,
+  UsergroupAddOutlined,
 } from '@ant-design/icons';
 
 export default function Sidebar() {
@@ -25,6 +26,7 @@ export default function Sidebar() {
     { path: '/tags', icon: TagsOutlined, label: '标签管理' },
     { path: '/base-models', icon: DatabaseOutlined, label: '基座管理' },
     { path: '/events', icon: CalendarOutlined, label: '活动管理' },
+    { path: '/event-registrations', icon: UsergroupAddOutlined, label: '报名管理' },
     { path: '/projects', icon: AppstoreAddOutlined, label: '项目管理' },
     { path: '/hot-topics', icon: FireOutlined, label: '热门话题' },
   ];

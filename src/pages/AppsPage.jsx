@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, InputNumber, message, Space, Popconfirm, Row, Col, Drawer, Descriptions, Tag, Divider } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, EyeOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import { Table, Button, Modal, Form, Input, Select, InputNumber, message, Space, Popconfirm, Row, Col, Drawer, Descriptions, Tag, Divider, Upload } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined, EyeOutlined, MinusCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import { appAPI, categoryAPI } from '../services/api';
+import { resolveAdminMediaUrl } from '../utils/mediaUrl';
 
 const { TextArea } = Input;
 
@@ -479,8 +480,44 @@ export default function AppsPage() {
             <TextArea rows={2} placeholder="请输入效果对比说明" />
           </Form.Item>
 
-          <Form.Item label="应用图标地址（图片 URL）" name="icon_bg">
-            <Input placeholder="例如：https://example.com/logo.png" />
+          <Form.Item label="应用图标">
+            <Space direction="vertical" size="middle" className="w-full">
+              <Form.Item name="icon_bg" noStyle>
+                <Input placeholder="图片地址，或点击下方上传" />
+              </Form.Item>
+              <Upload
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                showUploadList={false}
+                customRequest={async ({ file, onSuccess, onError }) => {
+                  try {
+                    // 检查文件大小（1MB限制）
+                    if (file.size > 1024 * 1024) {
+                      message.error('图标文件不能超过1MB');
+                      onError(new Error('文件过大'));
+                      return;
+                    }
+                    const resp = await appAPI.uploadIcon(file);
+                    const url = resp.data?.url;
+                    form.setFieldsValue({ icon_bg: url });
+                    onSuccess(resp.data);
+                    message.success('图标上传成功');
+                  } catch (e) {
+                    onError(e);
+                    message.error(e?.response?.data?.message || '图标上传失败');
+                  }
+                }}
+              >
+                <Button icon={<UploadOutlined />}>上传图标（限1MB）</Button>
+              </Upload>
+              <Form.Item noStyle shouldUpdate>
+                {() => {
+                  const u = form.getFieldValue('icon_bg');
+                  return u ? (
+                    <img src={resolveAdminMediaUrl(u)} alt="图标预览" className="w-20 h-20 rounded-xl object-cover border border-slate-200" />
+                  ) : null;
+                }}
+              </Form.Item>
+            </Space>
           </Form.Item>
 
           <Form.Item className="mb-0 text-right">
